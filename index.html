@@ -1,0 +1,278 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IELTS Timer</title>
+<style>
+  /* https://notiontimerdark.netlify.app/ */
+    body {
+        font-family: "Sans-serif workhorse", sans-serif;
+        background-color: transparent; /* Changed to transparent */
+        color: #fff;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .timer {
+        width: 200px; /* Adjusted width, was 180px */
+        height: 200px; /* Adjusted height, was 180px */
+        border-radius: 12px; /* Adjusted border radius */
+        background-color: #262626; /* Add dark square around the timer with rounded edges */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 15px; /* Adjusted padding */
+    }
+
+    .display {
+        font-size: 4.2em; /* Adjusted font size */
+        color: #fff;
+        margin-bottom: 2px; /* Adjusted space between display and buttons */
+    }
+
+    .buttons {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 5px;
+        margin-bottom: 1px; /* Adjusted space between buttons and bottom of the timer */
+    }
+
+    .buttons button {
+        padding: 8px 12px; /* Adjusted padding to make buttons slightly bigger */
+        margin: 1px; /* Adjusted margin */
+        opacity: 0.5;
+        transition: opacity 0.3s;
+        border: none;
+        border-radius: 10px; /* Adjusted border radius */
+        background-color: #444;
+        color: #fff;
+        cursor: pointer;
+        font-size: 0.75em; /* Reduced font size, was 0.62em */
+    }
+
+    .buttons button.large {
+        font-size: 0.75em; /* Reduced font size for larger buttons */
+    }
+
+    .buttons button:hover {
+        opacity: 0.8;
+    }
+
+    .buttons button:active {
+        opacity: 0.8;
+    }
+
+    .buttons button:disabled {
+        opacity: 0.3;
+        pointer-events: none;
+    }
+
+    .buttons button.highlighted {
+        background-color: #2f2f2f;
+    }
+
+    #cancel {
+        padding: 8px 12px; /* Adjusted padding */
+        margin: 1px; /* Adjusted margin */
+        opacity: 0.5;
+        transition: opacity 0.3s;
+        border: none;
+        border-radius: 10px; /* Adjusted border radius */
+        background-color: #444;
+        color: #fff;
+        cursor: pointer;
+        font-size: 0.75em; /* Reduced font size */
+    }
+
+    #cancel:hover {
+        opacity: 0.8;
+    }
+
+    #cancel:active {
+        opacity: 0.8;
+    }
+
+    #cancel:disabled {
+        opacity: 0.3;
+        pointer-events: none;
+    }
+
+    @keyframes flash {
+        0% { background-color: #262626; }
+        50% { background-color: #fff; }
+        100% { background-color: #262626; }
+    }
+
+    .flash-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #fff;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        border-radius: 22px; 
+        animation: fadeIn 1s ease-out;
+    }
+
+    .overlay-text {
+        font-size: 0.5em;
+        color: rgba(255, 255, 255, 0.3);
+        text-align: center;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 0.5; }
+    }
+</style>
+</head>
+<body>
+  
+  <audio id="alarm-sound" src="https://mindsnapz.de/wp-content/uploads/2023/09/Nachrichtentoene.mp3"></audio>
+  
+<div class="timer" id="timer">
+    <div class="display" id="timerDisplay">00:00</div>
+    <div class="buttons">
+        <button id="minus" onmousedown="startAdjustTime(-60)" onmouseup="stopAdjustTime()" class="large">-</button>
+        <button id="start" onclick="toggleTimer()" disabled class="large">Start</button>
+        <button id="plus" onmousedown="startAdjustTime(60)" onmouseup="stopAdjustTime()" class="large">+</button>
+    </div>
+    <div class="buttons">
+      <button id="shortBreak" onclick="setShortBreak()">1</button>
+      <button id="longBreak" onclick="setLongBreak()">2</button>
+      <button id="longBreak" onclick="set30()">20</button>
+      <button id="longBreak" onclick="set20()">40</button>
+    </div>
+    <div class="buttons">
+        <!-- -->
+        <button id="cancel" onclick="cancelTimer()">Cancel</button>
+        
+    </div>
+</div>
+<!-- 
+<div class="flash-overlay" id="overlay" style="display: none;" onclick="stopFlash()">
+    <div class="overlay-text">Click anywhere to stop the timer</div>
+</div>
+-->
+
+<script>
+    let timer;
+    let time = 0;
+    let isRunning = false;
+    let adjustTimerInterval;
+  const alarmSound = document.getElementById('alarm-sound');
+
+    function startAdjustTime(seconds) {
+        adjustTime(seconds);
+        adjustTimerInterval = setInterval(function() {
+            adjustTime(seconds);
+        }, 100);
+    }
+
+    function stopAdjustTime() {
+        clearInterval(adjustTimerInterval);
+    }
+
+    function toggleTimer() {
+        if (!isRunning) {
+            isRunning = true;
+            timer = setInterval(updateTimer, 1000);
+            document.getElementById('start').innerText = 'Pause';
+        } else {
+            isRunning = false;
+            clearInterval(timer);
+            document.getElementById('start').innerText = 'Resume';
+        }
+    }
+
+    function cancelTimer() {
+        clearInterval(timer);
+        time = 0;
+        isRunning = false;
+        document.getElementById('timerDisplay').innerText = formatTime(time);
+        document.getElementById('start').innerText = 'Start';
+    }
+
+    function updateTimer() {
+        if (time > 0) {
+            time--;
+            document.getElementById('timerDisplay').innerText = formatTime(time);
+        } else if (time === 0) {
+            clearInterval(timer);
+            isRunning = false;
+            document.getElementById('start').innerText = 'Start';
+            alarmSound.play();
+           // document.getElementById('timer').style.display = 'none';
+            // document.getElementById('overlay').style.display = 'flex';
+           // document.getElementById('overlay').style.animation = 'flash 0.5s infinite';
+        }
+    }
+
+    function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    function adjustTime(seconds) {
+        time += seconds;
+        if (time < 0) {
+            time = 0;
+        }
+        document.getElementById('timerDisplay').innerText = formatTime(time);
+        
+        if (time > 0) {
+            document.getElementById('start').removeAttribute('disabled');
+        } else {
+            document.getElementById('start').setAttribute('disabled', 'disabled');
+        }
+    }
+
+    function setShortBreak() {
+        time = 60;
+        document.getElementById('timerDisplay').innerText = formatTime(time);
+        document.getElementById('start').removeAttribute('disabled');
+    }
+
+    function setLongBreak() {
+        time = 120;
+        document.getElementById('timerDisplay').innerText = formatTime(time);
+        document.getElementById('start').removeAttribute('disabled');
+    }
+  
+    function set30() {
+        time = 1200;
+        document.getElementById('timerDisplay').innerText = formatTime(time);
+        document.getElementById('start').removeAttribute('disabled');
+    }
+  
+  function set20() {
+        time = 2400;
+        document.getElementById('timerDisplay').innerText = formatTime(time);
+        document.getElementById('start').removeAttribute('disabled');
+    }
+
+    function stopFlash() {
+        document.getElementById('overlay').style.animation = 'fadeOut 0.5s ease-out';
+        setTimeout(function() {
+            document.getElementById('overlay').style.display = 'none';
+             document.getElementById('timer').style.display = 'flex';
+        }, 500);
+    }
+</script>
+  
+</body>
+</html>
